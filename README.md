@@ -13,6 +13,7 @@ A mobile-friendly web application for scanning ISBN barcodes and managing book c
 - 📱 **Mobile-First Design**: Touch-friendly interface optimized for small screens
 - 💾 **Local Storage**: All data stored locally, no backend required
 - 🚀 **Offline-Ready**: Works without internet (except for fetching book details)
+- 🔄 **Google Sheet Sync (optional)**: Automatically send scanned/added books to a Google Sheet via a Google Apps Script Web App
 
 ## Technologies Used
 
@@ -32,6 +33,8 @@ bookScan/
 │   ├── storage.ts      # localStorage management
 │   ├── scanner.ts      # Barcode scanning service
 │   ├── booksAPI.ts     # Google Books API integration
+│   ├── export.ts       # CSV export
+│   ├── sync.ts         # Google Sheet sync (Apps Script Web App)
 │   └── utils.ts        # UI utilities
 ├── dist/               # Compiled JavaScript (generated)
 ├── index.html          # Main HTML file
@@ -137,6 +140,45 @@ The app uses the free Google Books API to fetch book details:
 - **No API key required** for basic usage
 - **Rate limits**: Standard Google API limits apply
 
+### Google Sheet Sync (optional)
+
+BookScan is a static site with no backend, so it can't safely hold a Google service-account
+key. Instead, sync works by POSTing to a **Google Apps Script Web App** that you deploy
+yourself, bound to your own Sheet:
+
+1. Create (or open) a Google Sheet.
+2. **Extensions > Apps Script**, and paste in:
+   ```javascript
+   function doPost(e) {
+     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+     var data = JSON.parse(e.postData.contents);
+
+     sheet.appendRow([
+       data.timestamp || new Date().toISOString(),
+       data.collection || '',
+       data.title || '',
+       data.authors || '',
+       data.isbn || '',
+       data.publisher || '',
+       data.publishedDate || ''
+     ]);
+
+     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+       .setMimeType(ContentService.MimeType.JSON);
+   }
+   ```
+3. **Deploy > New deployment** → type **Web app** → Execute as **Me** → Who has access **Anyone**.
+4. Copy the resulting `.../exec` URL.
+5. In BookScan, tap the ⚙️ settings icon, check "Enable sync", paste the URL, and Save.
+
+Every book you scan or add manually is now also sent to that Sheet in the background.
+
+**Important limitation**: Apps Script Web Apps don't return browser-readable CORS responses,
+so the app sends the request with `mode: 'no-cors'` and can't read the result. This means a
+successful send only confirms the request went out — not that Apps Script actually wrote the
+row (e.g. a typo'd sheet name or a script error on the Apps Script side is invisible to the
+app). Check your Sheet directly to confirm data is arriving as expected.
+
 ## Browser Compatibility
 
 - ✅ Chrome/Edge (Android/Desktop)
@@ -170,12 +212,13 @@ See TODO.md for detailed implementation tasks and future enhancements.
 1. **Storage**: Limited by browser localStorage capacity
 2. **Offline**: Cannot fetch book details without internet connection
 3. **Camera**: Requires device with camera and HTTPS connection
-4. **Export**: No data export/import functionality yet (planned)
+4. **Import**: CSV export is supported, but there's no import path back in yet
 5. **API Limits**: Google Books API has usage limits
+6. **Sync confirmation**: Google Sheet sync can't confirm the write succeeded (see Google Sheet Sync section above)
 
 ## Future Enhancements
 
-- [ ] Export/import collections to JSON or CSV
+- [ ] Import collections from JSON or CSV
 - [ ] Barcode scanning from image files
 - [ ] Book cover upload for manual entries
 - [ ] Search within collections
@@ -204,7 +247,7 @@ See TODO.md for detailed implementation tasks and future enhancements.
 ### Storage Full
 
 - Clear browser cache and data
-- Export collections (when feature is available)
+- Export collections to CSV first (📥 button) to keep a backup
 - Delete unused collections
 
 ## License

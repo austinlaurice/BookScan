@@ -14,6 +14,8 @@
 - [x] Modal dialogs for user input
 - [x] Toast notifications for feedback
 - [x] Loading states and error handling
+- [x] CSV export (single collection and all collections)
+- [x] Google Sheet sync via Apps Script Web App (opt-in, fire-and-forget)
 
 ## 🔨 Core Functionality - Ready for Testing
 
@@ -59,11 +61,11 @@
 
 ### High Priority
 
-- [ ] **Export/Import Functionality**
+- [ ] **Import Functionality** (export to CSV is done, see Completed)
   - Export collections to JSON
   - Import from JSON file
-  - Export to CSV format
-  
+
+
 - [ ] **Search & Filter**
   - Search books within collection by title/author
   - Filter books by year, author, etc.
@@ -123,10 +125,14 @@
   - Background sync
 
 - [ ] **Data Management**
-  - Backup to cloud storage (Google Drive, Dropbox)
   - Share collections with others
   - Duplicate detection (same ISBN)
   - Data usage statistics
+
+- [ ] **Google Sheet Sync polish** (v1 done, see Completed — these are optional follow-ups)
+  - Retry-on-failure / offline queue for sync requests
+  - Per-collection sheet routing (currently one global endpoint for the whole app)
+  - A way to confirm the Apps Script write actually succeeded (blocked by the no-cors/opaque-response limitation — would need a different transport, e.g. a tiny proxy)
 
 - [ ] **Accessibility**
   - ARIA labels for all interactive elements

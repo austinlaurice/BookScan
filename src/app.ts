@@ -3,6 +3,7 @@ import { BooksAPIService } from './booksAPI.js';
 import { ScannerService } from './scanner.js';
 import { UIUtils } from './utils.js';
 import { ExportService } from './export.js';
+import { SyncService } from './sync.js';
 import { Collection, Book } from './types.js';
 
 /**
@@ -101,6 +102,26 @@ class BookScanApp {
 
 		document.getElementById('btn-export-all')?.addEventListener('click', () => {
 			this.handleExportAllCollections();
+		});
+
+		// Sync settings
+		document.getElementById('btn-settings')?.addEventListener('click', () => {
+			const settings = SyncService.getSettings();
+			(document.getElementById('input-sync-enabled') as HTMLInputElement).checked = settings.enabled;
+			(document.getElementById('input-sync-url') as HTMLInputElement).value = settings.webAppUrl;
+			UIUtils.showModal('modal-sync-settings');
+		});
+
+		document.getElementById('btn-cancel-sync')?.addEventListener('click', () => {
+			UIUtils.hideModal('modal-sync-settings');
+		});
+
+		document.getElementById('btn-save-sync')?.addEventListener('click', () => {
+			const enabled = (document.getElementById('input-sync-enabled') as HTMLInputElement).checked;
+			const webAppUrl = (document.getElementById('input-sync-url') as HTMLInputElement).value.trim();
+			SyncService.saveSettings({ enabled, webAppUrl });
+			UIUtils.hideModal('modal-sync-settings');
+			UIUtils.showToast('Sync settings saved');
 		});
 
 		// Enter key handlers for inputs
@@ -291,7 +312,8 @@ class BookScanApp {
 				return;
 			}
 
-			StorageService.addBookToCollection(this.currentCollection.id, bookData);
+			const newBook = StorageService.addBookToCollection(this.currentCollection.id, bookData);
+			SyncService.syncBook(newBook, this.currentCollection.name);
 
 			// Reload collection
 			this.currentCollection = StorageService.getCollection(this.currentCollection.id);
@@ -334,7 +356,8 @@ class BookScanApp {
 				publishedDate: yearInput?.value || undefined
 			};
 
-			StorageService.addBookToCollection(this.currentCollection.id, bookData);
+			const newBook = StorageService.addBookToCollection(this.currentCollection.id, bookData);
+			SyncService.syncBook(newBook, this.currentCollection.name);
 
 			// Reload collection
 			this.currentCollection = StorageService.getCollection(this.currentCollection.id);

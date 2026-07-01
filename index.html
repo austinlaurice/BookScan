@@ -113,6 +113,25 @@
 			</div>
 		</div>
 
+		<!-- Modal for Sync Settings -->
+		<div id="modal-sync-settings" class="modal">
+			<div class="modal-content">
+				<h3>Google Sheet Sync</h3>
+				<label>
+					<input type="checkbox" id="input-sync-enabled">
+					Enable sync
+				</label>
+				<input type="text" id="input-sync-url" class="input-text"
+					placeholder="Apps Script Web App URL (…/exec)">
+				<p>Books are sent in the background. This only confirms the request was sent,
+					not that it was saved — check your Sheet directly.</p>
+				<div class="modal-actions">
+					<button id="btn-cancel-sync" class="btn btn-secondary">Cancel</button>
+					<button id="btn-save-sync" class="btn btn-primary">Save</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Loading Overlay -->
 		<div id="loading-overlay" class="loading-overlay">
 			<div class="spinner"></div>

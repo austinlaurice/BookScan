@@ -24,6 +24,8 @@ bookScan/
 │   ├── storage.ts             # localStorage management service
 │   ├── scanner.ts             # Barcode scanning service (Html5Qrcode)
 │   ├── booksAPI.ts            # Google Books API integration
+│   ├── export.ts              # CSV export service
+│   ├── sync.ts                # Google Sheet sync service (Apps Script Web App)
 │   └── utils.ts               # UI utilities (toasts, modals, loading)
 │
 └── 🔨 Build Output (dist/)
@@ -54,25 +56,26 @@ bookScan/
 │  • UI state management                                  │
 └─────────────────────────────────────────────────────────┘
                             │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-┌──────────────────┐ ┌─────────────┐ ┌────────────────┐
-│  StorageService  │ │ ScannerSvc  │ │ BooksAPIService│
-│   (storage.ts)   │ │(scanner.ts) │ │ (booksAPI.ts)  │
-├──────────────────┤ ├─────────────┤ ├────────────────┤
-│ • CRUD           │ │ • Camera    │ │ • Fetch by ISBN│
-│   operations     │ │   access    │ │ • Search books │
-│ • Collections    │ │ • Barcode   │ │ • Parse API    │
-│ • Books          │ │   scanning  │ │   responses    │
-│ • localStorage   │ │ • ISBN      │ │                │
-│   persistence    │ │   validation│ │                │
-└──────────────────┘ └─────────────┘ └────────────────┘
-        │                   │                  │
-        ▼                   ▼                  ▼
-┌──────────────────┐ ┌─────────────┐ ┌────────────────┐
-│   localStorage   │ │Html5Qrcode  │ │ Google Books   │
-│   (Browser API)  │ │  Library    │ │      API       │
-└──────────────────┘ └─────────────┘ └────────────────┘
+            ┌───────────────┼───────────────┬───────────────┐
+            ▼               ▼               ▼               ▼
+┌──────────────────┐ ┌─────────────┐ ┌────────────────┐ ┌──────────────┐
+│  StorageService  │ │ ScannerSvc  │ │ BooksAPIService│ │ SyncService  │
+│   (storage.ts)   │ │(scanner.ts) │ │ (booksAPI.ts)  │ │  (sync.ts)   │
+├──────────────────┤ ├─────────────┤ ├────────────────┤ ├──────────────┤
+│ • CRUD           │ │ • Camera    │ │ • Fetch by ISBN│ │ • Settings   │
+│   operations     │ │   access    │ │ • Search books │ │   storage    │
+│ • Collections    │ │ • Barcode   │ │ • Parse API    │ │ • POST book  │
+│ • Books          │ │   scanning  │ │   responses    │ │   to Apps    │
+│ • localStorage   │ │ • ISBN      │ │                │ │   Script Web │
+│   persistence    │ │   validation│ │                │ │   App        │
+└──────────────────┘ └─────────────┘ └────────────────┘ └──────────────┘
+        │                   │                  │                │
+        ▼                   ▼                  ▼                ▼
+┌──────────────────┐ ┌─────────────┐ ┌────────────────┐ ┌──────────────┐
+│   localStorage   │ │Html5Qrcode  │ │ Google Books   │ │ Google Sheet │
+│   (Browser API)  │ │  Library    │ │      API       │ │ (via Apps    │
+│                  │ │             │ │                │ │  Script)     │
+└──────────────────┘ └─────────────┘ └────────────────┘ └──────────────┘
 ```
 
 ## 🔄 Data Flow
@@ -104,7 +107,10 @@ bookScan/
 8. Data saved to localStorage
          │
          ▼
-9. UI refreshed with new book
+9. SyncService.syncBook() — fire-and-forget POST to Apps Script (if sync enabled)
+         │
+         ▼
+10. UI refreshed with new book
 ```
 
 ### Loading Collections
@@ -177,6 +183,22 @@ startScanner(elementId: string, onSuccess: callback, onError?: callback): Promis
 stopScanner(): Promise<void>
 isRunning(): boolean
 ```
+
+### SyncService
+
+```typescript
+getSettings(): SyncSettings
+saveSettings(settings: SyncSettings): void
+syncBook(book: Book, collectionName: string): void
+```
+
+Settings are stored under localStorage key `bookScan_syncSettings`, separate from
+`bookScan_collections`. `syncBook` is fire-and-forget: it POSTs to the configured Apps
+Script Web App URL using `mode: 'no-cors'` + `Content-Type: text/plain` (required because
+Apps Script Web Apps don't return browser-readable CORS responses and can't handle a
+preflight request). This means the app can only detect network-level send failures, never
+whether Apps Script actually wrote the row — a real, permanent limitation of this approach,
+not a bug to fix later.
 
 ### UIUtils
 
@@ -278,10 +300,10 @@ index.html loads from dist/
 
 When implementing planned features:
 
-- **Export/Import**: Add `ExportService` for JSON/CSV handling
+- **Import**: Add import path for JSON/CSV back into collections (export already done via `ExportService`)
 - **Search**: Add `SearchService` with indexing
 - **PWA**: Add `ServiceWorker` and manifest.json
-- **Sync**: Consider `SyncService` for cloud backup
+- **Sync robustness**: `SyncService` (done, v1) could grow retry-on-failure/offline queueing and per-collection sheet routing
 - **Analytics**: Optional `AnalyticsService` wrapper
 - **Testing**: Jest for unit tests, Playwright for E2E
 
