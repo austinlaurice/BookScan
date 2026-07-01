@@ -1,4 +1,4 @@
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 /**
  * Service for handling barcode/QR code scanning
@@ -20,12 +20,27 @@ export class ScannerService {
 		}
 
 		try {
-			this.html5QrCode = new Html5Qrcode(elementId);
+			this.html5QrCode = new Html5Qrcode(elementId, {
+				formatsToSupport: [
+					Html5QrcodeSupportedFormats.EAN_13,
+					Html5QrcodeSupportedFormats.EAN_8,
+					Html5QrcodeSupportedFormats.UPC_A,
+					Html5QrcodeSupportedFormats.UPC_E,
+					Html5QrcodeSupportedFormats.CODE_128
+				],
+				useBarCodeDetectorIfSupported: true,
+				verbose: false
+			});
 
 			const config = {
 				fps: 10,
-				qrbox: { width: 250, height: 250 },
-				aspectRatio: 1.0
+				// ISBN barcodes (EAN-13) are wide and short, not square — a wide
+				// rectangular box makes them much easier to fit and scan than a
+				// square one.
+				qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+					const boxWidth = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
+					return { width: boxWidth, height: Math.floor(boxWidth * 0.4) };
+				}
 			};
 
 			// Try to use back camera (environment) for mobile devices

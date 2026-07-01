@@ -1,4 +1,5 @@
 import { Book } from './types.js';
+import { UIUtils } from './utils.js';
 
 /**
  * Sync configuration stored locally: whether sync is on, and the Google Apps
@@ -31,17 +32,33 @@ export class SyncService {
 	}
 
 	/**
-	 * Fire-and-forget sync of a single book to the configured Web App.
-	 * Apps Script Web Apps don't return browser-readable CORS responses, so
-	 * `no-cors` + `text/plain` is used to avoid a failing preflight request.
-	 * This means only network-level failures are observable here — a request
-	 * that "sends" successfully is not a guarantee the sheet was updated.
+	 * Fire-and-forget POST to a Web App. Apps Script Web Apps don't return
+	 * browser-readable CORS responses, so `no-cors` + `text/plain` is used to
+	 * avoid a failing preflight request. This means only network-level
+	 * failures are distinguishable here — a resolved request confirms the
+	 * browser sent it and got *some* response, not that Apps Script's doPost
+	 * actually wrote the row.
 	 */
+	private static sendPayload(webAppUrl: string, payload: Record<string, string>): void {
+		fetch(webAppUrl, {
+			method: 'POST',
+			mode: 'no-cors',
+			headers: { 'Content-Type': 'text/plain' },
+			body: JSON.stringify(payload)
+		})
+			.then(() => UIUtils.showToast('🔄 Synced to Google Sheet', 2000))
+			.catch((error) => {
+				console.error('Sync request failed to send:', error);
+				UIUtils.showToast('⚠️ Sync request failed to send (check network/URL)', 3000);
+			});
+	}
+
+	/** Syncs a single book to the configured Web App, if sync is enabled. */
 	static syncBook(book: Book, collectionName: string): void {
 		const settings = this.getSettings();
 		if (!settings.enabled || !settings.webAppUrl) return;
 
-		const payload = {
+		this.sendPayload(settings.webAppUrl, {
 			timestamp: new Date().toISOString(),
 			collection: collectionName,
 			title: book.title,
@@ -49,15 +66,19 @@ export class SyncService {
 			isbn: book.isbn || '',
 			publisher: book.publisher || '',
 			publishedDate: book.publishedDate || ''
-		};
+		});
+	}
 
-		fetch(settings.webAppUrl, {
-			method: 'POST',
-			mode: 'no-cors',
-			headers: { 'Content-Type': 'text/plain' },
-			body: JSON.stringify(payload)
-		}).catch((error) => {
-			console.error('Sync request failed to send:', error);
+	/** Sends a one-off test payload to an arbitrary URL, independent of saved settings. */
+	static sendTest(webAppUrl: string): void {
+		this.sendPayload(webAppUrl, {
+			timestamp: new Date().toISOString(),
+			collection: 'Test',
+			title: 'Test Book (BookScan sync check)',
+			authors: '',
+			isbn: '',
+			publisher: '',
+			publishedDate: ''
 		});
 	}
 }

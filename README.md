@@ -169,15 +169,26 @@ yourself, bound to your own Sheet:
    ```
 3. **Deploy > New deployment** → type **Web app** → Execute as **Me** → Who has access **Anyone**.
 4. Copy the resulting `.../exec` URL.
-5. In BookScan, tap the ⚙️ settings icon, check "Enable sync", paste the URL, and Save.
+5. In BookScan, tap the ⚙️ settings icon, check "Enable sync", paste the URL, and tap
+   **Send Test** — check your Sheet for a "Test Book (BookScan sync check)" row before
+   tapping Save, so you know the pipeline actually works.
+6. Tap **Save**.
 
-Every book you scan or add manually is now also sent to that Sheet in the background.
+Every book you scan or add manually is now also sent to that Sheet in the background,
+with a toast confirming the request was sent (or failed to send).
 
 **Important limitation**: Apps Script Web Apps don't return browser-readable CORS responses,
 so the app sends the request with `mode: 'no-cors'` and can't read the result. This means a
-successful send only confirms the request went out — not that Apps Script actually wrote the
+"synced" toast only confirms the request went out — not that Apps Script actually wrote the
 row (e.g. a typo'd sheet name or a script error on the Apps Script side is invisible to the
-app). Check your Sheet directly to confirm data is arriving as expected.
+app). Check your Sheet directly to confirm data is arriving as expected — the **Send Test**
+button in Settings is the fastest way to check this at any time.
+
+**If you edit your Apps Script code later**: saving the script does *not* update an
+already-deployed Web App. Go to **Deploy → Manage deployments** → edit (pencil icon) your
+deployment → set **Version: New version** → **Deploy**, or the live URL keeps running the
+old code. This is the most common reason sync silently "sends" but nothing shows up in the
+Sheet.
 
 ## Browser Compatibility
 

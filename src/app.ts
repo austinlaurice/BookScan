@@ -116,6 +116,15 @@ class BookScanApp {
 			UIUtils.hideModal('modal-sync-settings');
 		});
 
+		document.getElementById('btn-test-sync')?.addEventListener('click', () => {
+			const webAppUrl = (document.getElementById('input-sync-url') as HTMLInputElement).value.trim();
+			if (!webAppUrl) {
+				UIUtils.showToast('Enter a URL first');
+				return;
+			}
+			SyncService.sendTest(webAppUrl);
+		});
+
 		document.getElementById('btn-save-sync')?.addEventListener('click', () => {
 			const enabled = (document.getElementById('input-sync-enabled') as HTMLInputElement).checked;
 			const webAppUrl = (document.getElementById('input-sync-url') as HTMLInputElement).value.trim();
