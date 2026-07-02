@@ -53,3 +53,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub Pages deployments intermittently take far longer than the
+          # 10-minute default before reporting success — give them room
+          # instead of failing the whole run with "Timeout reached".
+          timeout: 1200000
