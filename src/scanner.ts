@@ -1,10 +1,43 @@
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { prepareZXingModule, readBarcodes, type ReaderOptions } from 'zxing-wasm/reader';
+
+// Serve the wasm binary from our own dist/ (copied there by the build script)
+// instead of the default CDN, so scanning works without third-party fetches.
+// The path is resolved against the document URL, which works both locally and
+// under the /BookScan/ GitHub Pages base path.
+prepareZXingModule({
+	overrides: {
+		locateFile: (path: string, prefix: string) =>
+			path.endsWith('.wasm') ? `dist/${path}` : prefix + path
+	}
+});
+
+const READER_OPTIONS: ReaderOptions = {
+	formats: ['EAN13', 'EAN8', 'UPCA', 'UPCE', 'Code128'],
+	tryHarder: true
+};
+
+// Central region of the camera frame that gets cropped out and decoded,
+// as fractions of the frame size. Cropping before decoding is essential:
+// zxing fails on a full frame where the barcode is a small part of a busy
+// scene, but succeeds on the same pixels cropped to just the barcode area
+// (verified against real photos). Wide and short to match EAN-13 geometry.
+const SCAN_REGION = { width: 0.9, height: 0.4 };
+
+const SCAN_INTERVAL_MS = 120;
 
 /**
- * Service for handling barcode/QR code scanning
+ * Service for scanning ISBN barcodes from the device camera.
+ *
+ * Pipeline: getUserMedia video stream → crop the central scan region of each
+ * frame into a canvas → decode with zxing-wasm (zxing-cpp compiled to
+ * WebAssembly, much stronger at 1D barcodes than JS decoders, and the same
+ * on every platform — no reliance on the flaky iOS native BarcodeDetector).
  */
 export class ScannerService {
-	private html5QrCode: Html5Qrcode | null = null;
+	private stream: MediaStream | null = null;
+	private videoEl: HTMLVideoElement | null = null;
+	private containerEl: HTMLElement | null = null;
+	private scanTimer: ReturnType<typeof setTimeout> | null = null;
 	private isScanning: boolean = false;
 
 	/**
@@ -19,88 +52,116 @@ export class ScannerService {
 			throw new Error('Scanner is already running');
 		}
 
-		try {
-			this.html5QrCode = new Html5Qrcode(elementId, {
-				formatsToSupport: [
-					Html5QrcodeSupportedFormats.EAN_13,
-					Html5QrcodeSupportedFormats.EAN_8,
-					Html5QrcodeSupportedFormats.UPC_A,
-					Html5QrcodeSupportedFormats.UPC_E,
-					Html5QrcodeSupportedFormats.CODE_128
-				],
-				// The library's own maintainer has confirmed the native
-				// BarcodeDetector path is unreliable for 1D barcodes on iOS —
-				// forcing the pure-JS zxing decoder instead is the recommended
-				// workaround there, and it works fine on Android too.
-				useBarCodeDetectorIfSupported: false,
-				verbose: false
-			});
+		const container = document.getElementById(elementId);
+		if (!container) {
+			throw new Error(`Scanner container #${elementId} not found`);
+		}
 
-			const config = {
-				// A higher scan rate gives the JS decoder more attempts per
-				// second to catch a clean, non-blurry frame.
-				fps: 25,
-				// ISBN barcodes (EAN-13) are wide and short, not square — a wide
-				// rectangular box makes them much easier to fit and scan than a
-				// square one. Sized generously (most of the viewport) since a
-				// bigger box gives the decoder a bigger, more forgiving target.
-				qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-					const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-					const boxWidth = Math.floor(minEdge * 0.9);
-					return { width: boxWidth, height: Math.floor(boxWidth * 0.45) };
-				},
-				// The decode canvas is always cropped down to the qrbox's CSS pixel
-				// size regardless of camera resolution — but a higher native stream
-				// gives that crop more real detail to work with before downscaling.
-				// Many browsers default to a much lower resolution unless asked.
-				videoConstraints: {
-					facingMode: "environment",
+		try {
+			this.stream = await navigator.mediaDevices.getUserMedia({
+				audio: false,
+				video: {
+					facingMode: 'environment',
 					width: { ideal: 1920 },
 					height: { ideal: 1080 }
 				}
-			};
-
-			// Try to use back camera (environment) for mobile devices
-			await this.html5QrCode.start(
-				{ facingMode: "environment" },
-				config,
-				(decodedText, decodedResult) => {
-					// Filter for ISBN/EAN-13 only (13 digits)
-					if (this.isValidISBN(decodedText)) {
-						onSuccess(decodedText);
-					}
-				},
-				(errorMessage) => {
-					// Ignore scanning errors (happens constantly while scanning)
-					// Only log if callback is provided
-					if (onError && !errorMessage.includes('NotFoundException')) {
-						console.warn('Scan error:', errorMessage);
-					}
-				}
-			);
-
-			this.isScanning = true;
+			});
 		} catch (error) {
 			console.error('Error starting scanner:', error);
 			throw new Error('Failed to start camera. Please grant camera permissions.');
 		}
+
+		// Wrapper keeps the scan-box overlay aligned with the video regardless
+		// of the container's own size.
+		const wrapper = document.createElement('div');
+		wrapper.style.position = 'relative';
+		wrapper.style.width = '100%';
+
+		const video = document.createElement('video');
+		// playsinline is required on iOS or the video hijacks the whole screen
+		video.setAttribute('playsinline', '');
+		video.muted = true;
+		video.srcObject = this.stream;
+		video.style.display = 'block';
+		video.style.width = '100%';
+		wrapper.appendChild(video);
+
+		const overlay = document.createElement('div');
+		overlay.style.position = 'absolute';
+		overlay.style.left = `${((1 - SCAN_REGION.width) / 2) * 100}%`;
+		overlay.style.top = `${((1 - SCAN_REGION.height) / 2) * 100}%`;
+		overlay.style.width = `${SCAN_REGION.width * 100}%`;
+		overlay.style.height = `${SCAN_REGION.height * 100}%`;
+		overlay.style.border = '3px solid rgba(255, 255, 255, 0.9)';
+		overlay.style.borderRadius = '8px';
+		overlay.style.boxShadow = '0 0 0 4000px rgba(0, 0, 0, 0.35)';
+		overlay.style.pointerEvents = 'none';
+		wrapper.appendChild(overlay);
+
+		container.innerHTML = '';
+		container.appendChild(wrapper);
+
+		this.containerEl = container;
+		this.videoEl = video;
+
+		try {
+			await video.play();
+		} catch (error) {
+			console.error('Error playing camera stream:', error);
+			this.cleanup();
+			throw new Error('Failed to start camera. Please grant camera permissions.');
+		}
+
+		this.isScanning = true;
+
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+		const scanFrame = async (): Promise<void> => {
+			if (!this.isScanning || !this.videoEl || !ctx) return;
+
+			if (this.videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && this.videoEl.videoWidth > 0) {
+				const vw = this.videoEl.videoWidth;
+				const vh = this.videoEl.videoHeight;
+				const cw = Math.floor(vw * SCAN_REGION.width);
+				const ch = Math.floor(vh * SCAN_REGION.height);
+				const cx = Math.floor((vw - cw) / 2);
+				const cy = Math.floor((vh - ch) / 2);
+
+				canvas.width = cw;
+				canvas.height = ch;
+				ctx.drawImage(this.videoEl, cx, cy, cw, ch, 0, 0, cw, ch);
+
+				try {
+					const results = await readBarcodes(ctx.getImageData(0, 0, cw, ch), READER_OPTIONS);
+					for (const result of results) {
+						if (result.isValid && this.isValidISBN(result.text)) {
+							onSuccess(result.text);
+							return;
+						}
+					}
+				} catch (error) {
+					// Real decode-infrastructure errors only — "no barcode in
+					// frame" is an empty result, not an exception.
+					console.warn('Scan error:', error);
+					onError?.(String(error));
+				}
+			}
+
+			this.scanTimer = setTimeout(scanFrame, SCAN_INTERVAL_MS);
+		};
+
+		scanFrame();
 	}
 
 	/**
 	 * Stop the scanner
 	 */
 	async stopScanner(): Promise<void> {
-		if (!this.html5QrCode || !this.isScanning) {
+		if (!this.isScanning) {
 			return;
 		}
-
-		try {
-			await this.html5QrCode.stop();
-			this.html5QrCode.clear();
-			this.isScanning = false;
-		} catch (error) {
-			console.error('Error stopping scanner:', error);
-		}
+		this.cleanup();
 	}
 
 	/**
@@ -108,6 +169,26 @@ export class ScannerService {
 	 */
 	isRunning(): boolean {
 		return this.isScanning;
+	}
+
+	private cleanup(): void {
+		this.isScanning = false;
+
+		if (this.scanTimer !== null) {
+			clearTimeout(this.scanTimer);
+			this.scanTimer = null;
+		}
+
+		if (this.stream) {
+			this.stream.getTracks().forEach(track => track.stop());
+			this.stream = null;
+		}
+
+		if (this.containerEl) {
+			this.containerEl.innerHTML = '';
+			this.containerEl = null;
+		}
+		this.videoEl = null;
 	}
 
 	/**

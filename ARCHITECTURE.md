@@ -22,7 +22,7 @@ bookScan/
 │   ├── app.ts                 # Main application logic & UI coordination
 │   ├── types.ts               # TypeScript interfaces (Book, Collection)
 │   ├── storage.ts             # localStorage management service
-│   ├── scanner.ts             # Barcode scanning service (Html5Qrcode)
+│   ├── scanner.ts             # Barcode scanning service (zxing-wasm)
 │   ├── booksAPI.ts            # Google Books API integration
 │   ├── export.ts              # CSV export service
 │   ├── sync.ts                # Google Sheet sync service (Apps Script Web App)
@@ -72,7 +72,7 @@ bookScan/
         │                   │                  │                │
         ▼                   ▼                  ▼                ▼
 ┌──────────────────┐ ┌─────────────┐ ┌────────────────┐ ┌──────────────┐
-│   localStorage   │ │Html5Qrcode  │ │ Google Books   │ │ Google Sheet │
+│   localStorage   │ │ zxing-wasm  │ │ Google Books   │ │ Google Sheet │
 │   (Browser API)  │ │  Library    │ │      API       │ │ (via Apps    │
 │                  │ │             │ │                │ │  Script)     │
 └──────────────────┘ └─────────────┘ └────────────────┘ └──────────────┘
@@ -92,7 +92,7 @@ bookScan/
 3. Camera opens, user points at barcode
          │
          ▼
-4. Html5Qrcode detects ISBN
+4. zxing-wasm decodes ISBN from the cropped scan region
          │
          ▼
 5. BooksAPIService.fetchBookByISBN(isbn)

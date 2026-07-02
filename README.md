@@ -19,7 +19,7 @@ A mobile-friendly web application for scanning ISBN barcodes and managing book c
 
 - **TypeScript**: Type-safe JavaScript
 - **HTML5 & CSS3**: Modern web standards
-- **Html5Qrcode**: Barcode/QR code scanning library
+- **zxing-wasm**: Barcode scanning via zxing-cpp compiled to WebAssembly (reliable EAN-13 decoding on iOS and Android alike)
 - **Google Books API**: Book information retrieval
 - **localStorage**: Client-side data persistence
 
@@ -84,8 +84,7 @@ Open your browser to `http://localhost:8080`
 For production deployment, simply host the following files on any web server:
 - `index.html`
 - `styles.css`
-- `dist/` directory
-- The Html5Qrcode library (loaded via CDN in index.html)
+- `dist/` directory (includes `zxing_reader.wasm`, copied there by `npm run build`)
 
 > **Note**: For camera access, your site must be served over HTTPS (except for localhost during development).
 
@@ -271,5 +270,5 @@ Contributions welcome! Please feel free to submit issues or pull requests.
 
 ## Acknowledgments
 
-- [Html5Qrcode](https://github.com/mebjas/html5-qrcode) by Minhaz
+- [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) / [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp)
 - [Google Books API](https://developers.google.com/books)

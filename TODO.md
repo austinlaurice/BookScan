@@ -8,7 +8,7 @@
 - [x] CSS styling with touch-friendly UI elements
 - [x] LocalStorage service for data persistence
 - [x] Google Books API integration
-- [x] Html5Qrcode scanner integration
+- [x] Barcode scanner integration (zxing-wasm; replaced Html5Qrcode, whose JS decoder couldn't reliably read EAN-13 on iOS)
 - [x] Collection management (create, rename, delete)
 - [x] Book management (add via scan, add manually, delete)
 - [x] Modal dialogs for user input
