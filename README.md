@@ -136,8 +136,10 @@ The scanner is specifically configured to recognize ISBN barcodes used on books.
 Book details are fetched by ISBN from Google Books first, then OpenLibrary as a fallback:
 - **Google Books**: `https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}` — **now
   effectively requires an API key**: Google reduced the keyless daily quota to zero, so
-  keyless requests get HTTP 429. Create a free key (1,000 lookups/day) and paste it into
-  the app's ⚙️ Settings:
+  keyless requests get HTTP 429. The app ships with a built-in key that is
+  website-restricted to this app's GitHub Pages origin (safe to publish; unusable from
+  anywhere else — including localhost dev servers). To use your own key instead, create
+  a free one (1,000 lookups/day) and paste it into the app's ⚙️ Settings:
   1. Go to [console.cloud.google.com](https://console.cloud.google.com), create/pick a project
   2. **APIs & Services → Library** → enable **Books API**
   3. **APIs & Services → Credentials → Create credentials → API key**

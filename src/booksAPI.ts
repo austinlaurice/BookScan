@@ -12,11 +12,18 @@ export class BooksAPIService {
 	private static readonly OPENLIBRARY_URL = 'https://openlibrary.org/api/books';
 	private static readonly API_KEY_STORAGE = 'bookScan_booksApiKey';
 
+	// Website-restricted key (only usable from this app's deployed origin, so
+	// safe to ship in the public bundle). Restricted to the Books API. Note:
+	// lookups from localhost dev servers are blocked by the restriction —
+	// add localhost to the key's allowed websites or set a key in Settings
+	// if you need lookups during local development.
+	private static readonly DEFAULT_API_KEY = 'AIzaSyChF6m02TVT57J_Dg1befnRdS0GxvWnpbE';
+
 	static getApiKey(): string {
 		try {
-			return localStorage.getItem(this.API_KEY_STORAGE) || '';
+			return localStorage.getItem(this.API_KEY_STORAGE) || this.DEFAULT_API_KEY;
 		} catch {
-			return '';
+			return this.DEFAULT_API_KEY;
 		}
 	}
 
