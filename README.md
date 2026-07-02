@@ -8,7 +8,7 @@ A mobile-friendly web application for scanning ISBN barcodes and managing book c
 
 - 📚 **Collection Management**: Create, rename, and delete book collections
 - 📷 **Barcode Scanning**: Scan ISBN/EAN-13 barcodes using device camera
-- 🔍 **Automatic Book Details**: Fetches book information from Google Books API
+- 🔍 **ISBN Capture**: Scanned ISBNs are recorded directly — no book-details lookup, no third-party book APIs
 - ✏️ **Manual Entry**: Add books manually if scanning isn't available
 - 📱 **Mobile-First Design**: Touch-friendly interface optimized for small screens
 - 💾 **Local Storage**: All data stored locally, no backend required
@@ -20,7 +20,6 @@ A mobile-friendly web application for scanning ISBN barcodes and managing book c
 - **TypeScript**: Type-safe JavaScript
 - **HTML5 & CSS3**: Modern web standards
 - **zxing-wasm**: Barcode scanning via zxing-cpp compiled to WebAssembly (reliable EAN-13 decoding on iOS and Android alike)
-- **Google Books API**: Book information retrieval
 - **localStorage**: Client-side data persistence
 
 ## Project Structure
@@ -32,7 +31,6 @@ bookScan/
 │   ├── types.ts        # TypeScript interfaces
 │   ├── storage.ts      # localStorage management
 │   ├── scanner.ts      # Barcode scanning service
-│   ├── booksAPI.ts     # Google Books API integration
 │   ├── export.ts       # CSV export
 │   ├── sync.ts         # Google Sheet sync (Apps Script Web App)
 │   └── utils.ts        # UI utilities
@@ -104,7 +102,7 @@ For production deployment, simply host the following files on any web server:
 2. Click "**📷 Scan Book**"
 3. Grant camera permissions if prompted
 4. Point camera at ISBN barcode
-5. Book details are fetched automatically from Google Books API
+5. The ISBN is recorded in the collection and synced to your Google Sheet (if sync is enabled)
 
 #### Manual Entry
 
@@ -131,24 +129,10 @@ The scanner is specifically configured to recognize ISBN barcodes used on books.
 
 ## API Usage
 
-### Book lookup (Google Books + OpenLibrary)
-
-Book details are fetched by ISBN from Google Books first, then OpenLibrary as a fallback:
-- **Google Books**: `https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}` — **now
-  effectively requires an API key**: Google reduced the keyless daily quota to zero, so
-  keyless requests get HTTP 429. The app ships with a built-in key that is
-  website-restricted to this app's GitHub Pages origin (safe to publish; unusable from
-  anywhere else — including localhost dev servers). To use your own key instead, create
-  a free one (1,000 lookups/day) and paste it into the app's ⚙️ Settings:
-  1. Go to [console.cloud.google.com](https://console.cloud.google.com), create/pick a project
-  2. **APIs & Services → Library** → enable **Books API**
-  3. **APIs & Services → Credentials → Create credentials → API key**
-  4. Recommended: restrict the key to **Websites** (your GitHub Pages origin) and to the
-     **Books API**, since the key is visible to anyone using the site
-- **OpenLibrary fallback**: `https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}` — keyless,
-  but coverage of Chinese-language books is poor
-- **If lookup fails or finds nothing**, the manual-add form opens automatically with the
-  scanned ISBN prefilled, so a scan is never wasted
+There is deliberately **no book-details lookup**: a scan records the ISBN itself (locally
+and to the synced Google Sheet). Book metadata lives in the Sheet, which is the system of
+record — earlier versions fetched details from Google Books, but Google reduced the
+keyless quota to zero and the lookup added failure modes for no benefit to this workflow.
 
 ### Google Sheet Sync (optional)
 
@@ -231,10 +215,10 @@ See TODO.md for detailed implementation tasks and future enhancements.
 ## Known Limitations
 
 1. **Storage**: Limited by browser localStorage capacity
-2. **Offline**: Cannot fetch book details without internet connection
+2. **Offline**: Sync to Google Sheets needs an internet connection (scans still record locally)
 3. **Camera**: Requires device with camera and HTTPS connection
 4. **Import**: CSV export is supported, but there's no import path back in yet
-5. **API Limits**: Google Books API has usage limits
+5. **No book metadata**: scans record the ISBN only — titles/authors etc. live in your Sheet
 6. **Sync confirmation**: Google Sheet sync can't confirm the write succeeded (see Google Sheet Sync section above)
 
 ## Future Enhancements
@@ -258,12 +242,12 @@ See TODO.md for detailed implementation tasks and future enhancements.
 - Check if other apps can access the camera
 - Try a different browser
 
-### Books Not Found
+### Barcode Won't Scan
 
-- Verify the ISBN is correct
-- Try entering manually
-- Check internet connection
-- Some books may not be in Google Books database
+- Hold the phone steady ~15–20 cm from the barcode and let the camera focus
+- Make sure the whole barcode fits inside the scan box
+- Improve lighting; avoid glare on glossy covers
+- Fall back to "✏️ Add Manually" and type the ISBN
 
 ### Storage Full
 
@@ -282,4 +266,3 @@ Contributions welcome! Please feel free to submit issues or pull requests.
 ## Acknowledgments
 
 - [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) / [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp)
-- [Google Books API](https://developers.google.com/books)

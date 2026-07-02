@@ -7,7 +7,7 @@
 - [x] HTML5 responsive layout with mobile-first design
 - [x] CSS styling with touch-friendly UI elements
 - [x] LocalStorage service for data persistence
-- [x] Google Books API integration
+- [x] ISBN capture flow (scan records ISBN directly; book-details lookup removed by design)
 - [x] Barcode scanner integration (zxing-wasm; replaced Html5Qrcode, whose JS decoder couldn't reliably read EAN-13 on iOS)
 - [x] Collection management (create, rename, delete)
 - [x] Book management (add via scan, add manually, delete)
@@ -31,7 +31,6 @@
 2. **Book Scanning**
    - [ ] Camera permissions handling
    - [ ] Scan ISBN barcode successfully
-   - [ ] Fetch book details from Google Books API
    - [ ] Add scanned book to collection
    - [ ] Handle books not found in API
 
@@ -74,7 +73,6 @@
 - [ ] **Enhanced Book Details**
   - Full book detail view (modal or separate page)
   - Display description, page count, categories
-  - Link to Google Books for more info
 
 - [ ] **Sorting Options**
   - Sort by title (A-Z, Z-A)
@@ -202,7 +200,6 @@
 ## 🧪 Testing
 
 - [ ] Unit tests for StorageService
-- [ ] Unit tests for BooksAPIService
 - [ ] Integration tests for scanner
 - [ ] E2E tests for core workflows
 - [ ] Cross-browser testing

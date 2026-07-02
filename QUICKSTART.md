@@ -173,7 +173,7 @@ After getting familiar with the app:
 ## 💡 Pro Tips
 
 - Create collections by genre, reading status, or location
-- Use manual entry for older books that may not be in Google Books
+- Use manual entry if a barcode will not scan
 - The app works offline (but can't fetch book details without internet)
 - You can use this on multiple devices, but data won't sync automatically
 

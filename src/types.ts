@@ -23,31 +23,3 @@ export interface Collection {
 	createdDate: string;
 	modifiedDate: string;
 }
-
-/**
- * Google Books API response interface
- */
-export interface GoogleBooksResponse {
-	kind: string;
-	totalItems: number;
-	items?: GoogleBookItem[];
-}
-
-export interface GoogleBookItem {
-	id: string;
-	volumeInfo: {
-		title: string;
-		authors?: string[];
-		publisher?: string;
-		publishedDate?: string;
-		description?: string;
-		industryIdentifiers?: Array<{
-			type: string;
-			identifier: string;
-		}>;
-		imageLinks?: {
-			smallThumbnail?: string;
-			thumbnail?: string;
-		};
-	};
-}

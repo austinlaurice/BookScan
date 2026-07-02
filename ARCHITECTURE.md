@@ -23,7 +23,6 @@ bookScan/
 │   ├── types.ts               # TypeScript interfaces (Book, Collection)
 │   ├── storage.ts             # localStorage management service
 │   ├── scanner.ts             # Barcode scanning service (zxing-wasm)
-│   ├── booksAPI.ts            # Google Books API integration
 │   ├── export.ts              # CSV export service
 │   ├── sync.ts                # Google Sheet sync service (Apps Script Web App)
 │   └── utils.ts               # UI utilities (toasts, modals, loading)
@@ -56,27 +55,30 @@ bookScan/
 │  • UI state management                                  │
 └─────────────────────────────────────────────────────────┘
                             │
-            ┌───────────────┼───────────────┬───────────────┐
-            ▼               ▼               ▼               ▼
-┌──────────────────┐ ┌─────────────┐ ┌────────────────┐ ┌──────────────┐
-│  StorageService  │ │ ScannerSvc  │ │ BooksAPIService│ │ SyncService  │
-│   (storage.ts)   │ │(scanner.ts) │ │ (booksAPI.ts)  │ │  (sync.ts)   │
-├──────────────────┤ ├─────────────┤ ├────────────────┤ ├──────────────┤
-│ • CRUD           │ │ • Camera    │ │ • Fetch by ISBN│ │ • Settings   │
-│   operations     │ │   access    │ │ • Search books │ │   storage    │
-│ • Collections    │ │ • Barcode   │ │ • Parse API    │ │ • POST book  │
-│ • Books          │ │   scanning  │ │   responses    │ │   to Apps    │
-│ • localStorage   │ │ • ISBN      │ │                │ │   Script Web │
-│   persistence    │ │   validation│ │                │ │   App        │
-└──────────────────┘ └─────────────┘ └────────────────┘ └──────────────┘
-        │                   │                  │                │
-        ▼                   ▼                  ▼                ▼
-┌──────────────────┐ ┌─────────────┐ ┌────────────────┐ ┌──────────────┐
-│   localStorage   │ │ zxing-wasm  │ │ Google Books   │ │ Google Sheet │
-│   (Browser API)  │ │  Library    │ │      API       │ │ (via Apps    │
-│                  │ │             │ │                │ │  Script)     │
-└──────────────────┘ └─────────────┘ └────────────────┘ └──────────────┘
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+┌──────────────────┐ ┌─────────────┐ ┌──────────────┐
+│  StorageService  │ │ ScannerSvc  │ │ SyncService  │
+│   (storage.ts)   │ │(scanner.ts) │ │  (sync.ts)   │
+├──────────────────┤ ├─────────────┤ ├──────────────┤
+│ • CRUD           │ │ • Camera    │ │ • Settings   │
+│   operations     │ │   access    │ │   storage    │
+│ • Collections    │ │ • Barcode   │ │ • POST ISBN  │
+│ • Books          │ │   scanning  │ │   to Apps    │
+│ • localStorage   │ │ • ISBN      │ │   Script Web │
+│   persistence    │ │   validation│ │   App        │
+└──────────────────┘ └─────────────┘ └──────────────┘
+        │                   │               │
+        ▼                   ▼               ▼
+┌──────────────────┐ ┌─────────────┐ ┌──────────────┐
+│   localStorage   │ │ zxing-wasm  │ │ Google Sheet │
+│   (Browser API)  │ │  Library    │ │ (via Apps    │
+│                  │ │             │ │  Script)     │
+└──────────────────┘ └─────────────┘ └──────────────┘
 ```
+
+There is intentionally no book-details lookup service — a scan records the ISBN itself,
+and book metadata lives in the synced Google Sheet (the system of record).
 
 ## 🔄 Data Flow
 
@@ -95,22 +97,16 @@ bookScan/
 4. zxing-wasm decodes ISBN from the cropped scan region
          │
          ▼
-5. BooksAPIService.fetchBookByISBN(isbn)
+5. StorageService.addBookToCollection() — ISBN recorded as the entry
          │
          ▼
-6. Google Books API returns book data
+6. Data saved to localStorage
          │
          ▼
-7. StorageService.addBookToCollection()
+7. SyncService.syncBook() — fire-and-forget POST of the ISBN to Apps Script (if sync enabled)
          │
          ▼
-8. Data saved to localStorage
-         │
-         ▼
-9. SyncService.syncBook() — fire-and-forget POST to Apps Script (if sync enabled)
-         │
-         ▼
-10. UI refreshed with new book
+8. UI refreshed with new entry
 ```
 
 ### Loading Collections
@@ -167,13 +163,6 @@ deleteCollection(id: string): void
 getCollection(id: string): Collection | null
 addBookToCollection(collectionId: string, book: Omit<Book, 'id' | 'addedDate'>): Book
 removeBookFromCollection(collectionId: string, bookId: string): void
-```
-
-### BooksAPIService
-
-```typescript
-fetchBookByISBN(isbn: string): Promise<Book | null>
-searchBooks(query: string): Promise<Book[]>
 ```
 
 ### ScannerService

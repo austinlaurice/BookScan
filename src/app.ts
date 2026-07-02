@@ -1,5 +1,4 @@
 import { StorageService } from './storage.js';
-import { BooksAPIService } from './booksAPI.js';
 import { ScannerService } from './scanner.js';
 import { UIUtils } from './utils.js';
 import { ExportService } from './export.js';
@@ -109,7 +108,6 @@ class BookScanApp {
 			const settings = SyncService.getSettings();
 			(document.getElementById('input-sync-enabled') as HTMLInputElement).checked = settings.enabled;
 			(document.getElementById('input-sync-url') as HTMLInputElement).value = settings.webAppUrl;
-			(document.getElementById('input-books-api-key') as HTMLInputElement).value = BooksAPIService.getApiKey();
 			UIUtils.showModal('modal-sync-settings');
 		});
 
@@ -130,7 +128,6 @@ class BookScanApp {
 			const enabled = (document.getElementById('input-sync-enabled') as HTMLInputElement).checked;
 			const webAppUrl = (document.getElementById('input-sync-url') as HTMLInputElement).value.trim();
 			SyncService.saveSettings({ enabled, webAppUrl });
-			BooksAPIService.saveApiKey((document.getElementById('input-books-api-key') as HTMLInputElement).value);
 			UIUtils.hideModal('modal-sync-settings');
 			UIUtils.showToast('Settings saved');
 		});
@@ -304,7 +301,8 @@ class BookScanApp {
 	}
 
 	/**
-	 * Handle scanned ISBN
+	 * Handle scanned ISBN: record it locally and sync it to the Google
+	 * Sheet. No book-details lookup — the ISBN itself is the payload.
 	 */
 	private async handleScannedISBN(isbn: string): Promise<void> {
 		if (!this.currentCollection) return;
@@ -312,46 +310,23 @@ class BookScanApp {
 		// Stop scanner immediately
 		await this.scannerService.stopScanner();
 		UIUtils.switchView('collection-detail-view');
-		UIUtils.showLoading('Fetching book details...');
 
 		try {
-			const bookData = await BooksAPIService.fetchBookByISBN(isbn);
-
-			if (!bookData) {
-				UIUtils.hideLoading();
-				UIUtils.showToast('Book not found — add the details manually.');
-				this.openManualAddWithISBN(isbn);
-				return;
-			}
-
-			const newBook = StorageService.addBookToCollection(this.currentCollection.id, bookData);
+			const newBook = StorageService.addBookToCollection(this.currentCollection.id, {
+				title: isbn,
+				isbn
+			});
 			SyncService.syncBook(newBook, this.currentCollection.name);
 
 			// Reload collection
 			this.currentCollection = StorageService.getCollection(this.currentCollection.id);
 			this.loadCollectionDetail();
 
-			UIUtils.hideLoading();
-			UIUtils.showToast(`Added: ${bookData.title}`);
+			UIUtils.showToast(`Scanned: ${isbn}`);
 		} catch (error) {
-			UIUtils.hideLoading();
 			UIUtils.showToast((error as Error).message, 5000);
 			console.error(error);
-			// The scan itself worked — salvage it by prefilling manual entry
-			this.openManualAddWithISBN(isbn);
 		}
-	}
-
-	/**
-	 * Open the manual-add modal with the ISBN prefilled (used when a scan
-	 * decoded successfully but the book lookup failed or found nothing).
-	 */
-	private openManualAddWithISBN(isbn: string): void {
-		const isbnInput = document.getElementById('input-isbn') as HTMLInputElement;
-		if (isbnInput) {
-			isbnInput.value = isbn;
-		}
-		UIUtils.showModal('modal-add-book');
 	}
 
 	/**
