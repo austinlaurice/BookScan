@@ -113,10 +113,11 @@
 			</div>
 		</div>
 
-		<!-- Modal for Sync Settings -->
+		<!-- Modal for Settings (Google Sheet sync + Books API key) -->
 		<div id="modal-sync-settings" class="modal">
 			<div class="modal-content">
-				<h3>Google Sheet Sync</h3>
+				<h3>Settings</h3>
+				<h4>Google Sheet Sync</h4>
 				<label>
 					<input type="checkbox" id="input-sync-enabled">
 					Enable sync
@@ -125,6 +126,11 @@
 					placeholder="Apps Script Web App URL (…/exec)">
 				<p>Books are sent in the background. This only confirms the request was sent,
 					not that it was saved — check your Sheet directly.</p>
+				<h4>Google Books API Key</h4>
+				<input type="text" id="input-books-api-key" class="input-text"
+					placeholder="Google Books API key">
+				<p>Google Books now requires a (free) API key for book lookups — without one,
+					scans fall back to OpenLibrary, which has poor coverage of Chinese-language books.</p>
 				<div class="modal-actions">
 					<button id="btn-test-sync" class="btn btn-secondary">Send Test</button>
 					<button id="btn-cancel-sync" class="btn btn-secondary">Cancel</button>

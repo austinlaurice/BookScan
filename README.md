@@ -131,13 +131,22 @@ The scanner is specifically configured to recognize ISBN barcodes used on books.
 
 ## API Usage
 
-### Google Books API
+### Book lookup (Google Books + OpenLibrary)
 
-The app uses the free Google Books API to fetch book details:
-- **Endpoint**: `https://www.googleapis.com/books/v1/volumes`
-- **Query**: `?q=isbn:{isbn_number}`
-- **No API key required** for basic usage
-- **Rate limits**: Standard Google API limits apply
+Book details are fetched by ISBN from Google Books first, then OpenLibrary as a fallback:
+- **Google Books**: `https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}` — **now
+  effectively requires an API key**: Google reduced the keyless daily quota to zero, so
+  keyless requests get HTTP 429. Create a free key (1,000 lookups/day) and paste it into
+  the app's ⚙️ Settings:
+  1. Go to [console.cloud.google.com](https://console.cloud.google.com), create/pick a project
+  2. **APIs & Services → Library** → enable **Books API**
+  3. **APIs & Services → Credentials → Create credentials → API key**
+  4. Recommended: restrict the key to **Websites** (your GitHub Pages origin) and to the
+     **Books API**, since the key is visible to anyone using the site
+- **OpenLibrary fallback**: `https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}` — keyless,
+  but coverage of Chinese-language books is poor
+- **If lookup fails or finds nothing**, the manual-add form opens automatically with the
+  scanned ISBN prefilled, so a scan is never wasted
 
 ### Google Sheet Sync (optional)
 

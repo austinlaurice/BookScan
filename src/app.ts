@@ -104,11 +104,12 @@ class BookScanApp {
 			this.handleExportAllCollections();
 		});
 
-		// Sync settings
+		// Settings (sync + books API key)
 		document.getElementById('btn-settings')?.addEventListener('click', () => {
 			const settings = SyncService.getSettings();
 			(document.getElementById('input-sync-enabled') as HTMLInputElement).checked = settings.enabled;
 			(document.getElementById('input-sync-url') as HTMLInputElement).value = settings.webAppUrl;
+			(document.getElementById('input-books-api-key') as HTMLInputElement).value = BooksAPIService.getApiKey();
 			UIUtils.showModal('modal-sync-settings');
 		});
 
@@ -129,8 +130,9 @@ class BookScanApp {
 			const enabled = (document.getElementById('input-sync-enabled') as HTMLInputElement).checked;
 			const webAppUrl = (document.getElementById('input-sync-url') as HTMLInputElement).value.trim();
 			SyncService.saveSettings({ enabled, webAppUrl });
+			BooksAPIService.saveApiKey((document.getElementById('input-books-api-key') as HTMLInputElement).value);
 			UIUtils.hideModal('modal-sync-settings');
-			UIUtils.showToast('Sync settings saved');
+			UIUtils.showToast('Settings saved');
 		});
 
 		// Enter key handlers for inputs
@@ -317,7 +319,8 @@ class BookScanApp {
 
 			if (!bookData) {
 				UIUtils.hideLoading();
-				UIUtils.showToast('Book not found. Try adding manually.');
+				UIUtils.showToast('Book not found — add the details manually.');
+				this.openManualAddWithISBN(isbn);
 				return;
 			}
 
@@ -332,9 +335,23 @@ class BookScanApp {
 			UIUtils.showToast(`Added: ${bookData.title}`);
 		} catch (error) {
 			UIUtils.hideLoading();
-			UIUtils.showToast((error as Error).message);
+			UIUtils.showToast((error as Error).message, 5000);
 			console.error(error);
+			// The scan itself worked — salvage it by prefilling manual entry
+			this.openManualAddWithISBN(isbn);
 		}
+	}
+
+	/**
+	 * Open the manual-add modal with the ISBN prefilled (used when a scan
+	 * decoded successfully but the book lookup failed or found nothing).
+	 */
+	private openManualAddWithISBN(isbn: string): void {
+		const isbnInput = document.getElementById('input-isbn') as HTMLInputElement;
+		if (isbnInput) {
+			isbnInput.value = isbn;
+		}
+		UIUtils.showModal('modal-add-book');
 	}
 
 	/**
