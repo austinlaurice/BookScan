@@ -28,18 +28,26 @@ export class ScannerService {
 					Html5QrcodeSupportedFormats.UPC_E,
 					Html5QrcodeSupportedFormats.CODE_128
 				],
-				useBarCodeDetectorIfSupported: true,
+				// The library's own maintainer has confirmed the native
+				// BarcodeDetector path is unreliable for 1D barcodes on iOS —
+				// forcing the pure-JS zxing decoder instead is the recommended
+				// workaround there, and it works fine on Android too.
+				useBarCodeDetectorIfSupported: false,
 				verbose: false
 			});
 
 			const config = {
-				fps: 10,
+				// A higher scan rate gives the JS decoder more attempts per
+				// second to catch a clean, non-blurry frame.
+				fps: 25,
 				// ISBN barcodes (EAN-13) are wide and short, not square — a wide
 				// rectangular box makes them much easier to fit and scan than a
-				// square one.
+				// square one. Sized generously (most of the viewport) since a
+				// bigger box gives the decoder a bigger, more forgiving target.
 				qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-					const boxWidth = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
-					return { width: boxWidth, height: Math.floor(boxWidth * 0.4) };
+					const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+					const boxWidth = Math.floor(minEdge * 0.9);
+					return { width: boxWidth, height: Math.floor(boxWidth * 0.45) };
 				},
 				// The decode canvas is always cropped down to the qrbox's CSS pixel
 				// size regardless of camera resolution — but a higher native stream
