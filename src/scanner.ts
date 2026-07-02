@@ -40,6 +40,15 @@ export class ScannerService {
 				qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
 					const boxWidth = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
 					return { width: boxWidth, height: Math.floor(boxWidth * 0.4) };
+				},
+				// The decode canvas is always cropped down to the qrbox's CSS pixel
+				// size regardless of camera resolution — but a higher native stream
+				// gives that crop more real detail to work with before downscaling.
+				// Many browsers default to a much lower resolution unless asked.
+				videoConstraints: {
+					facingMode: "environment",
+					width: { ideal: 1920 },
+					height: { ideal: 1080 }
 				}
 			};
 
