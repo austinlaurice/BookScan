@@ -32,7 +32,7 @@
    - [ ] Camera permissions handling
    - [ ] Scan ISBN barcode successfully
    - [ ] Add scanned book to collection
-   - [ ] Handle books not found in API
+   - [ ] Sync sends the scanned ISBN when sync is enabled
 
 3. **Manual Book Entry**
    - [ ] Add book with all fields
@@ -69,10 +69,6 @@
   - Search books within collection by title/author
   - Filter books by year, author, etc.
   - Global search across all collections
-
-- [ ] **Enhanced Book Details**
-  - Full book detail view (modal or separate page)
-  - Display description, page count, categories
 
 - [ ] **Sorting Options**
   - Sort by title (A-Z, Z-A)
@@ -138,11 +134,6 @@
   - Screen reader optimization
   - High contrast mode
 
-- [ ] **Alternative APIs**
-  - OpenLibrary API as fallback
-  - ISBN.db integration
-  - Goodreads integration (if available)
-
 ### Nice to Have
 
 - [ ] **Advanced Features**
@@ -186,7 +177,6 @@
 ## 🔒 Security Considerations
 
 - [ ] Input sanitization (XSS prevention) - Currently using escapeHtml
-- [ ] Rate limiting for API calls (consider caching)
 - [ ] Storage encryption (optional, for sensitive notes)
 
 ## 📚 Documentation Needs
@@ -236,4 +226,4 @@
 
 ---
 
-**Last Updated**: Initial skeleton creation
+**Last Updated**: 2026-07-11 — reconciled with the ISBN-only scan design (no book-details lookup) and current sync/export feature set

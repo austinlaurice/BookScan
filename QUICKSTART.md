@@ -54,12 +54,12 @@ npx http-server . -p 8080
    - Open your collection
    - Click "📷 Scan Book"
    - Point your camera at the ISBN barcode on the back of a book
-   - The app will automatically fetch book details
+   - The ISBN is recorded directly (and synced to your Google Sheet if sync is enabled) — there's no book-details lookup, so title/author live in your Sheet
 
    **Via Manual Entry**:
    - Open your collection
    - Click "✏️ Add Manually"
-   - Fill in the book details
+   - Type the ISBN
    - Click "Add Book"
 
 ---
@@ -87,13 +87,14 @@ Now any changes to `.ts` files will automatically recompile!
 - ✅ Rename collections
 - ✅ Delete collections
 - ✅ View book count in each collection
+- ✅ Export a collection (or all collections) to CSV
 
 ### Books
-- ✅ Scan ISBN barcodes to add books
-- ✅ Manually add books without scanning
-- ✅ View book covers, titles, authors, and publication info
+- ✅ Scan ISBN barcodes to add books (ISBN recorded directly, no lookup)
+- ✅ Manually add books by ISBN when scanning isn't available
 - ✅ Delete books from collections
 - ✅ All data stored locally (no account needed!)
+- ✅ Optionally sync scanned/added books to a Google Sheet
 
 ---
 
@@ -119,7 +120,7 @@ Now any changes to `.ts` files will automatically recompile!
 - All data is stored in your browser's localStorage
 - Data persists between sessions
 - Clearing browser data will delete your collections
-- No cloud backup (export feature coming soon)
+- Export to CSV (📥 button) for a backup, or enable Google Sheet sync for an off-device copy
 
 ---
 
@@ -131,10 +132,10 @@ Now any changes to `.ts` files will automatically recompile!
 3. Try a different browser
 4. Check if camera works in other apps
 
-### "Book not found"
-1. Make sure the barcode is an ISBN (not another type of barcode)
-2. Try better lighting conditions
-3. Verify ISBN is correct
+### "Barcode won't scan"
+1. Make sure the barcode is an ISBN/EAN-13 (not another type of barcode)
+2. Try better lighting conditions and hold steady ~15-20cm away
+3. Make sure the whole barcode fits inside the scan box
 4. Use "Add Manually" as a fallback
 
 ### "Page won't load"
@@ -174,8 +175,8 @@ After getting familiar with the app:
 
 - Create collections by genre, reading status, or location
 - Use manual entry if a barcode will not scan
-- The app works offline (but can't fetch book details without internet)
-- You can use this on multiple devices, but data won't sync automatically
+- Scanning and local storage work offline; Google Sheet sync needs an internet connection
+- You can use this on multiple devices, but data won't sync automatically (unless you enable Google Sheet sync)
 
 ---
 

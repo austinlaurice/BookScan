@@ -53,32 +53,16 @@ export class SyncService {
 			});
 	}
 
-	/** Syncs a single book to the configured Web App, if sync is enabled. */
-	static syncBook(book: Book, collectionName: string): void {
+	/** Syncs a single book's ISBN to the configured Web App, if sync is enabled. */
+	static syncBook(book: Book): void {
 		const settings = this.getSettings();
-		if (!settings.enabled || !settings.webAppUrl) return;
+		if (!settings.enabled || !settings.webAppUrl || !book.isbn) return;
 
-		this.sendPayload(settings.webAppUrl, {
-			timestamp: new Date().toISOString(),
-			collection: collectionName,
-			title: book.title,
-			authors: book.authors?.join(', ') || '',
-			isbn: book.isbn || '',
-			publisher: book.publisher || '',
-			publishedDate: book.publishedDate || ''
-		});
+		this.sendPayload(settings.webAppUrl, { isbn: book.isbn });
 	}
 
 	/** Sends a one-off test payload to an arbitrary URL, independent of saved settings. */
 	static sendTest(webAppUrl: string): void {
-		this.sendPayload(webAppUrl, {
-			timestamp: new Date().toISOString(),
-			collection: 'Test',
-			title: 'Test Book (BookScan sync check)',
-			authors: '',
-			isbn: '',
-			publisher: '',
-			publishedDate: ''
-		});
+		this.sendPayload(webAppUrl, { isbn: '0000000000000' });
 	}
 }

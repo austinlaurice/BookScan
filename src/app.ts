@@ -103,7 +103,7 @@ class BookScanApp {
 			this.handleExportAllCollections();
 		});
 
-		// Settings (sync + books API key)
+		// Settings (Google Sheet sync)
 		document.getElementById('btn-settings')?.addEventListener('click', () => {
 			const settings = SyncService.getSettings();
 			(document.getElementById('input-sync-enabled') as HTMLInputElement).checked = settings.enabled;
@@ -316,7 +316,7 @@ class BookScanApp {
 				title: isbn,
 				isbn
 			});
-			SyncService.syncBook(newBook, this.currentCollection.name);
+			SyncService.syncBook(newBook);
 
 			// Reload collection
 			this.currentCollection = StorageService.getCollection(this.currentCollection.id);
@@ -335,30 +335,22 @@ class BookScanApp {
 	private handleAddManualBook(): void {
 		if (!this.currentCollection) return;
 
-		const titleInput = document.getElementById('input-title') as HTMLInputElement;
-		const authorInput = document.getElementById('input-author') as HTMLInputElement;
 		const isbnInput = document.getElementById('input-isbn') as HTMLInputElement;
-		const publisherInput = document.getElementById('input-publisher') as HTMLInputElement;
-		const yearInput = document.getElementById('input-year') as HTMLInputElement;
+		const isbn = isbnInput?.value.trim();
 
-		const title = titleInput?.value.trim();
-
-		if (!title) {
-			UIUtils.showToast('Title is required');
+		if (!isbn) {
+			UIUtils.showToast('ISBN is required');
 			return;
 		}
 
 		try {
 			const bookData: Omit<Book, 'id' | 'addedDate'> = {
-				title,
-				authors: authorInput?.value.trim() ? [authorInput.value.trim()] : undefined,
-				isbn: isbnInput?.value.trim() || undefined,
-				publisher: publisherInput?.value.trim() || undefined,
-				publishedDate: yearInput?.value || undefined
+				title: isbn,
+				isbn
 			};
 
 			const newBook = StorageService.addBookToCollection(this.currentCollection.id, bookData);
-			SyncService.syncBook(newBook, this.currentCollection.name);
+			SyncService.syncBook(newBook);
 
 			// Reload collection
 			this.currentCollection = StorageService.getCollection(this.currentCollection.id);

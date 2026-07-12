@@ -12,7 +12,7 @@ A mobile-friendly web application for scanning ISBN barcodes and managing book c
 - ✏️ **Manual Entry**: Add books manually if scanning isn't available
 - 📱 **Mobile-First Design**: Touch-friendly interface optimized for small screens
 - 💾 **Local Storage**: All data stored locally, no backend required
-- 🚀 **Offline-Ready**: Works without internet (except for fetching book details)
+- 🚀 **Offline-Ready**: Scanning and local storage work without internet (Google Sheet sync needs a connection)
 - 🔄 **Google Sheet Sync (optional)**: Automatically send scanned/added books to a Google Sheet via a Google Apps Script Web App
 
 ## Technologies Used
@@ -106,9 +106,11 @@ For production deployment, simply host the following files on any web server:
 
 #### Manual Entry
 
+Use this when scanning isn't available (no camera, damaged barcode, etc.).
+
 1. Open a collection
 2. Click "**✏️ Add Manually**"
-3. Fill in book details (title is required)
+3. Type the ISBN
 4. Click "**Add Book**"
 
 ### Managing Collections
@@ -140,36 +142,73 @@ BookScan is a static site with no backend, so it can't safely hold a Google serv
 key. Instead, sync works by POSTing to a **Google Apps Script Web App** that you deploy
 yourself, bound to your own Sheet:
 
-1. Create (or open) a Google Sheet.
-2. **Extensions > Apps Script**, and paste in:
+1. Open the target Google Sheet.
+2. **Extensions > Apps Script**. This binds the script to the spreadsheet you opened it
+   from, so it can use `SpreadsheetApp.getActiveSpreadsheet()` without hardcoding the
+   spreadsheet ID.
+3. Find the **gid** of the specific tab you want to sync into: open that tab in the browser
+   and look at the URL, e.g. `.../edit?gid=952194812#gid=952194812` → gid is `952194812`.
+   A spreadsheet can have multiple tabs, and `gid` is how you pin the script to one specific
+   tab regardless of which tab happens to be open when the script runs.
+4. Decide which column the ISBN goes in (as a 1-indexed column number — A=1, B=2, … F=6),
+   and paste in:
    ```javascript
    function doPost(e) {
-     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-     var data = JSON.parse(e.postData.contents);
+     var SHEET_GID = 952194812;    // the tab's gid from its URL
+     var ISBN_COLUMN = 6;          // column F
 
-     sheet.appendRow([
-       data.timestamp || new Date().toISOString(),
-       data.collection || '',
-       data.title || '',
-       data.authors || '',
-       data.isbn || '',
-       data.publisher || '',
-       data.publishedDate || ''
-     ]);
+     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()
+       .find(function (s) { return s.getSheetId() === SHEET_GID; });
+
+     if (!sheet) {
+       return ContentService.createTextOutput(
+         JSON.stringify({ status: 'error', message: 'No tab with gid ' + SHEET_GID })
+       ).setMimeType(ContentService.MimeType.JSON);
+     }
+
+     var data = JSON.parse(e.postData.contents);
+     var isbn = (data.isbn || '').toString().trim();
+     if (!isbn) {
+       return ContentService.createTextOutput(
+         JSON.stringify({ status: 'error', message: 'Missing isbn' })
+       ).setMimeType(ContentService.MimeType.JSON);
+     }
+
+     // Only write into a row where every column is empty — a row that has
+     // data in ANY column (not just F) is considered "used" and skipped, so
+     // this never overwrites a row you've filled in by hand elsewhere.
+     var targetRow = sheet.getLastRow() + 1;
+
+     sheet.getRange(targetRow, ISBN_COLUMN).setValue(isbn);
 
      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
        .setMimeType(ContentService.MimeType.JSON);
    }
    ```
-3. **Deploy > New deployment** → type **Web app** → Execute as **Me** → Who has access **Anyone**.
-4. Copy the resulting `.../exec` URL.
-5. In BookScan, tap the ⚙️ settings icon, check "Enable sync", paste the URL, and tap
-   **Send Test** — check your Sheet for a "Test Book (BookScan sync check)" row before
-   tapping Save, so you know the pipeline actually works.
-6. Tap **Save**.
+5. **Deploy > New deployment** → type **Web app** → Execute as **Me** → Who has access **Anyone**.
+6. Copy the resulting `.../exec` URL.
+7. In BookScan, tap the ⚙️ settings icon, check "Enable sync", paste the URL, and tap
+   **Send Test** — check the target tab's column F for a `0000000000000` row before
+   tapping Save, so you know the pipeline actually works end to end (right tab, right
+   column). Delete that test row afterward.
+8. Tap **Save**.
 
-Every book you scan or add manually is now also sent to that Sheet in the background,
-with a toast confirming the request was sent (or failed to send).
+Every book you scan or add manually now has its ISBN sent to that tab's column F in the
+background, with a toast confirming the request was sent (or failed to send).
+
+**Where sync settings live and when it fires**: `{ enabled, webAppUrl }` is stored under the
+localStorage key `bookScan_syncSettings` (separate from the `bookScan_collections` book data).
+`SyncService.syncBook()` is called from two places in `app.ts`, both *after* the book is
+already saved locally: `handleScannedISBN()` (after a barcode scan) and
+`handleAddManualBook()` (after manual entry) — so a failed or slow sync never blocks adding
+the book itself.
+
+**Payload sent per book**: just `{ "isbn": "9780143127550" }` — nothing else. Earlier versions
+also sent `timestamp`/`collection`/`title`/`authors`/`publisher`/`publishedDate`, but since
+both scanning and manual entry are ISBN-only (see [API Usage](#api-usage) above), those fields
+were always empty or a duplicate of the ISBN, so they were dropped from the payload entirely.
+If you need per-collection routing or a timestamp column later, that's a real gap — see
+`TODO.md`.
 
 **Important limitation**: Apps Script Web Apps don't return browser-readable CORS responses,
 so the app sends the request with `mode: 'no-cors'` and can't read the result. This means a

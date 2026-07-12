@@ -87,33 +87,28 @@
 		<div id="modal-add-book" class="modal">
 			<div class="modal-content">
 				<h3>Add Book Manually</h3>
-				<input type="text" id="input-isbn" class="input-text" placeholder="ISBN (optional)" maxlength="13">
-				<input type="text" id="input-title" class="input-text" placeholder="Title *" required>
-				<input type="text" id="input-author" class="input-text" placeholder="Author">
-				<input type="text" id="input-publisher" class="input-text" placeholder="Publisher">
-				<input type="number" id="input-year" class="input-text" placeholder="Year" min="1000" max="9999">
+				<input type="text" id="input-isbn" class="input-text" placeholder="ISBN *" maxlength="13" required>
 				<div class="modal-actions">
 					<button id="btn-cancel-book" class="btn btn-secondary">Cancel</button>
 					<button id="btn-save-book" class="btn btn-primary">Add Book</button>
 				</div>
-				<!-- Modal for Collection Menu -->
-				<div id="modal-collection-menu" class="modal">
-					<div class="modal-content">
-						<h3>Collection Options</h3>
-						<button id="btn-rename-collection" class="btn btn-secondary btn-large">✏️ Rename</button>
-						<button id="btn-export-collection-menu" class="btn btn-secondary btn-large">📥 Export to
-							CSV</button>
-						<button id="btn-delete-collection" class="btn btn-danger btn-large">🗑️ Delete
-							Collection</button>
-						<button id="btn-cancel-menu" class="btn btn-secondary btn-large">Cancel</button>
-					</div>
-				</div> <button id="btn-delete-collection" class="btn btn-danger btn-large">🗑️ Delete
+			</div>
+		</div>
+
+		<!-- Modal for Collection Menu -->
+		<div id="modal-collection-menu" class="modal">
+			<div class="modal-content">
+				<h3>Collection Options</h3>
+				<button id="btn-rename-collection" class="btn btn-secondary btn-large">✏️ Rename</button>
+				<button id="btn-export-collection-menu" class="btn btn-secondary btn-large">📥 Export to
+					CSV</button>
+				<button id="btn-delete-collection" class="btn btn-danger btn-large">🗑️ Delete
 					Collection</button>
 				<button id="btn-cancel-menu" class="btn btn-secondary btn-large">Cancel</button>
 			</div>
 		</div>
 
-		<!-- Modal for Settings (Google Sheet sync + Books API key) -->
+		<!-- Modal for Settings (Google Sheet sync) -->
 		<div id="modal-sync-settings" class="modal">
 			<div class="modal-content">
 				<h3>Settings</h3>

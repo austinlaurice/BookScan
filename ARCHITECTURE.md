@@ -178,7 +178,8 @@ isRunning(): boolean
 ```typescript
 getSettings(): SyncSettings
 saveSettings(settings: SyncSettings): void
-syncBook(book: Book, collectionName: string): void
+syncBook(book: Book): void
+sendTest(webAppUrl: string): void
 ```
 
 Settings are stored under localStorage key `bookScan_syncSettings`, separate from
@@ -188,6 +189,22 @@ Apps Script Web Apps don't return browser-readable CORS responses and can't hand
 preflight request). This means the app can only detect network-level send failures, never
 whether Apps Script actually wrote the row — a real, permanent limitation of this approach,
 not a bug to fix later.
+
+**Call sites**: `app.ts` calls `SyncService.syncBook()` from exactly two places, both *after*
+`StorageService.addBookToCollection()` has already succeeded — `handleScannedISBN()` and
+`handleAddManualBook()` — so sync is always best-effort on top of an already-saved local book,
+never a precondition for it. `sendTest()` is wired to the "Send Test" button in the Settings
+modal and POSTs a fixed placeholder payload to whatever URL is currently typed in the field,
+independent of saved settings — useful for verifying a Web App URL before hitting Save.
+
+**Payload shape** (`syncBook`): just `{ isbn }` — no title/authors/publisher/timestamp/
+collection. Earlier versions sent those too, but since scan and manual entry are both
+ISBN-only (see the "no book-details lookup" note above), they were always empty or a
+duplicate of the ISBN, so they were dropped. The Apps Script side (see `README.md`) is
+correspondingly a single-purpose "append this ISBN to column F of one specific tab, found by
+gid, into the first row where every column is empty" — it does not know about collections or
+timestamps, and it treats a row with data in *any* column as used, not just column F, so it
+never writes over a row you've filled in by hand.
 
 ### UIUtils
 
